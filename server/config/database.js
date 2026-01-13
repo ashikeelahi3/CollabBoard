@@ -6,10 +6,14 @@ import mongoose from 'mongoose';
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      // Connection options for better performance
+      // Connection options for better performance and SSL fix
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      // SSL/TLS options
+      ssl: true,
+      tls: true,
+      tlsInsecure: false
     });
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);

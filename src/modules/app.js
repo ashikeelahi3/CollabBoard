@@ -108,12 +108,33 @@ class App {
     }
 
     try {
-      // TODO: Implement actual login API call
-      console.log('Login attempt:', { email });
-      this.showNotification('Login functionality coming soon!', 'info');
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store token and user data
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      this.currentUser = data.user;
+      this.showNotification('Login successful!', 'success');
+      
+      // Hide auth forms and show dashboard
+      this.showDashboard();
+      
     } catch (error) {
       console.error('Login error:', error);
-      this.showNotification('Login failed. Please try again.', 'error');
+      this.showNotification(error.message || 'Login failed. Please try again.', 'error');
     }
   }
 
@@ -138,12 +159,33 @@ class App {
     }
 
     try {
-      // TODO: Implement actual register API call
-      console.log('Register attempt:', { username, email });
-      this.showNotification('Registration functionality coming soon!', 'info');
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Store token and user data
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      this.currentUser = data.user;
+      this.showNotification('Registration successful! Welcome!', 'success');
+      
+      // Hide auth forms and show dashboard
+      this.showDashboard();
+      
     } catch (error) {
       console.error('Register error:', error);
-      this.showNotification('Registration failed. Please try again.', 'error');
+      this.showNotification(error.message || 'Registration failed. Please try again.', 'error');
     }
   }
 
@@ -190,6 +232,56 @@ class App {
         notification.remove();
       }
     }, 5000);
+  }
+
+  /**
+   * Show dashboard after successful authentication
+   */
+  showDashboard() {
+    // Hide all other screens
+    document.getElementById('welcome').classList.add('hidden');
+    document.getElementById('auth-container').classList.add('hidden');
+    
+    // Show dashboard
+    document.getElementById('dashboard').classList.remove('hidden');
+    
+    // Update header
+    const navMenu = document.querySelector('.nav-menu');
+    navMenu.innerHTML = `
+      <span>Welcome, ${this.currentUser.username}!</span>
+      <button id="logout-btn" class="btn btn-secondary">Logout</button>
+    `;
+    
+    // Add logout handler
+    document.getElementById('logout-btn').addEventListener('click', this.handleLogout.bind(this));
+  }
+
+  /**
+   * Handle logout
+   */
+  handleLogout() {
+    // Clear storage
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    
+    // Reset state
+    this.currentUser = null;
+    
+    // Show welcome screen
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('welcome').classList.remove('hidden');
+    
+    // Reset header
+    const navMenu = document.querySelector('.nav-menu');
+    navMenu.innerHTML = `
+      <button id="login-btn" class="btn btn-primary">Login</button>
+      <button id="register-btn" class="btn btn-secondary">Register</button>
+    `;
+    
+    // Re-setup event listeners
+    this.setupEventListeners();
+    
+    this.showNotification('Logged out successfully', 'info');
   }
 }
 

@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/database.js';
+import authRoutes from './routes/auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +30,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../src')));
+
+// Routes
+app.use('/api/auth', authRoutes);
 
 // Basic route
 app.get('/api/health', (req, res) => {
@@ -54,10 +58,7 @@ const PORT = process.env.PORT || 3000;
 // Connect to database and start server
 const startServer = async () => {
   try {
-    // TODO: Enable MongoDB connection after setup
-    // await connectDB();
-    console.log('MongoDB connection disabled for initial setup');
-    
+    await connectDB();
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Frontend: http://localhost:${PORT}`);
