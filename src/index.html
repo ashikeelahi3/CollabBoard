@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CollabBoard - Real-Time Kanban</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>CollabBoard</h1>
+                </div>
+                <nav class="nav-menu">
+                    <button id="login-btn" class="btn btn-primary">Login</button>
+                    <button id="register-btn" class="btn btn-secondary">Register</button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Loading State -->
+            <div id="loading" class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Loading CollabBoard...</p>
+            </div>
+
+            <!-- Welcome Screen -->
+            <div id="welcome" class="welcome-screen">
+                <div class="welcome-content">
+                    <h2>Welcome to CollabBoard</h2>
+                    <p>Real-time Kanban collaboration made simple</p>
+                    <div class="welcome-actions">
+                        <button class="btn btn-primary btn-large" onclick="showLogin()">Get Started</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auth Forms Container -->
+            <div id="auth-container" class="auth-container hidden">
+                <!-- Login Form -->
+                <div id="login-form" class="auth-form">
+                    <h2>Login to CollabBoard</h2>
+                    <form>
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Login</button>
+                    </form>
+                    <p class="auth-switch">
+                        Don't have an account? 
+                        <a href="#" onclick="showRegister()">Register here</a>
+                    </p>
+                </div>
+
+                <!-- Register Form -->
+                <div id="register-form" class="auth-form hidden">
+                    <h2>Create Account</h2>
+                    <form>
+                        <div class="form-group">
+                            <label for="register-username">Username</label>
+                            <input type="text" id="register-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email">Email</label>
+                            <input type="email" id="register-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+                    </form>
+                    <p class="auth-switch">
+                        Already have an account? 
+                        <a href="#" onclick="showLogin()">Login here</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Dashboard (will be populated by JS) -->
+            <div id="dashboard" class="dashboard hidden">
+                <div class="dashboard-header">
+                    <h2>Your Boards</h2>
+                    <button class="btn btn-primary">Create Board</button>
+                </div>
+                <div class="boards-grid">
+                    <!-- Boards will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Board View (will be populated by JS) -->
+            <div id="board-view" class="board-view hidden">
+                <!-- Board content will be loaded here -->
+            </div>
+        </main>
+
+        <!-- Notification Container -->
+        <div id="notifications" class="notifications-container"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="modules/app.js"></script>
+    
+    <!-- Basic UI Functions -->
+    <script>
+        function showLogin() {
+            document.getElementById('welcome').classList.add('hidden');
+            document.getElementById('auth-container').classList.remove('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+
+        // Hide loading on page load
+        window.addEventListener('load', () => {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('welcome').classList.remove('hidden');
+        });
+    </script>
+</body>
+</html>
