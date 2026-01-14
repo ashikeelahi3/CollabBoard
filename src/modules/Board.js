@@ -140,10 +140,10 @@ export class Board {
         <form id="add-column-form">
           <div class="form-group">
             <label>Column Title</label>
-            <input type="text" id="column-title" required>
+            <input type="text" id="column-title" required maxlength="50" placeholder="Enter column title">
           </div>
           <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+            <button type="button" class="btn btn-secondary" id="cancel-column">Cancel</button>
             <button type="submit" class="btn btn-primary">Add Column</button>
           </div>
         </form>
@@ -151,10 +151,28 @@ export class Board {
     `;
     document.body.appendChild(modal);
 
+    // Close on outside click
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
+
+    // Close on ESC key
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // Cancel button
+    document.getElementById('cancel-column').onclick = () => modal.remove();
+
     document.getElementById('add-column-form').onsubmit = async (e) => {
       e.preventDefault();
       await this.createColumn();
       modal.remove();
+      document.removeEventListener('keydown', escHandler);
     };
   }
 
@@ -167,14 +185,14 @@ export class Board {
         <form id="add-card-form">
           <div class="form-group">
             <label>Card Title</label>
-            <input type="text" id="card-title" required>
+            <input type="text" id="card-title" required maxlength="200" placeholder="Enter card title">
           </div>
           <div class="form-group">
             <label>Description (optional)</label>
-            <textarea id="card-description" rows="3"></textarea>
+            <textarea id="card-description" rows="3" maxlength="2000" placeholder="Enter card description"></textarea>
           </div>
           <div class="form-actions">
-            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+            <button type="button" class="btn btn-secondary" id="cancel-card">Cancel</button>
             <button type="submit" class="btn btn-primary">Add Card</button>
           </div>
         </form>
@@ -182,10 +200,28 @@ export class Board {
     `;
     document.body.appendChild(modal);
 
+    // Close on outside click
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
+
+    // Close on ESC key
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // Cancel button
+    document.getElementById('cancel-card').onclick = () => modal.remove();
+
     document.getElementById('add-card-form').onsubmit = async (e) => {
       e.preventDefault();
       await this.createCard(columnId);
       modal.remove();
+      document.removeEventListener('keydown', escHandler);
     };
   }
 
