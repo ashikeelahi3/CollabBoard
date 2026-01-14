@@ -329,23 +329,56 @@ class App {
     if (boards.length === 0) {
       boardsGrid.innerHTML = `
         <div class="empty-state">
-          <p>No boards yet. Create your first board to get started!</p>
+          <div class="empty-icon">📋</div>
+          <h3>No boards yet</h3>
+          <p>Create your first board to start organizing your work!</p>
+          <button class="btn btn-primary" onclick="window.app.showCreateBoardModal()">Create Your First Board</button>
         </div>
       `;
     } else {
       boardsGrid.innerHTML = boards.map(board => {
         const memberCount = 1 + (board.members?.length || 0);
+        const createdDate = new Date(board.createdAt);
+        const updatedDate = new Date(board.updatedAt);
+        const description = board.description && board.description.trim() ? board.description : 'No description provided';
+        
         return `
-          <div class="board-card" data-board-id="${board._id}" style="background: ${board.background}">
-            <h3>${board.title}</h3>
-            <p>${board.description || 'No description'}</p>
-            <div class="board-meta">
-              <span>Owner: ${board.owner.username}</span>
-              <span>👥 ${memberCount} member${memberCount !== 1 ? 's' : ''}</span>
+          <div class="board-card" data-board-id="${board._id}">
+            <div class="board-card-header" style="background: ${board.background || '#0366d6'}">
+              <h3>${board.title}</h3>
+            </div>
+            <div class="board-card-body">
+              <p class="board-description">${description}</p>
+              <div class="board-stats">
+                <div class="stat-item">
+                  <span class="stat-icon">👥</span>
+                  <span class="stat-label">Members</span>
+                  <span class="stat-value">${memberCount}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-icon">📅</span>
+                  <span class="stat-label">Created</span>
+                  <span class="stat-value">${createdDate.toLocaleDateString()}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-icon">🔄</span>
+                  <span class="stat-label">Updated</span>
+                  <span class="stat-value">${updatedDate.toLocaleDateString()}</span>
+                </div>
+              </div>
+              <div class="board-footer">
+                <span class="board-owner">👤 ${board.owner.username}</span>
+                <div class="board-card-actions">
+                  <button class="btn-edit-board" onclick="event.stopPropagation(); window.app.showEditBoardModal('${board._id}')" title="Edit">✏️</button>
+                  <button class="btn-delete-board" onclick="event.stopPropagation(); window.app.deleteBoard('${board._id}')" title="Delete">🗑️</button>
+                  <button class="btn-view" onclick="event.stopPropagation(); window.app.openBoard('${board._id}')">Open</button>
+                </div>
+              </div>
             </div>
           </div>
         `;
       }).join('');
+      
       // Add click handlers to board cards
       document.querySelectorAll('.board-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -425,6 +458,99 @@ class App {
     
     const board = new Board(boardId);
     await board.load();
+  }
+
+  /**
+   * Show edit board modal
+   */
+  async showEditBoardModal(boardId) {
+    try {
+      const data = await apiClient.get(`/boards/${boardId}`);
+      const board = data.board;
+      
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <h2>Edit Board</h2>
+          <form id="edit-board-form">
+            <div class="form-group">
+              <label>Board Title</label>
+              <input type="text" id="edit-board-title" value="${board.title}" required maxlength="100">
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="edit-board-description" maxlength="500">${board.description || ''}</textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      document.getElementById('edit-board-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.updateBoard(boardId);
+        modal.remove();
+      });
+    } catch (error) {
+      console.error('Load board error:', error);
+      this.showNotification('Failed to load board details', 'error');
+    }
+  }
+
+  /**
+   * Update board
+   */
+  async updateBoard(boardId) {
+    try {
+      const title = document.getElementById('edit-board-title').value;
+      const description = document.getElementById('edit-board-description').value;
+
+      await apiClient.put(`/boards/${boardId}`, { title, description });
+      this.showNotification('Board updated successfully!', 'success');
+      this.loadBoards();
+    } catch (error) {
+      console.error('Update board error:', error);
+      this.showNotification(error.message || 'Failed to update board', 'error');
+    }
+  }
+
+  /**
+   * Delete board
+   */
+  async deleteBoard(boardId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <h2 style="color: #dc2626;">Delete Board</h2>
+        <p style="margin: 1rem 0; color: #374151;">Are you sure you want to delete this board? This action cannot be undone.</p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+      try {
+        await apiClient.delete(`/boards/${boardId}`);
+        this.showNotification('Board deleted successfully!', 'success');
+        this.loadBoards();
+        modal.remove();
+      } catch (error) {
+        console.error('Delete board error:', error);
+        this.showNotification(error.message || 'Failed to delete board', 'error');
+        modal.remove();
+      }
+    });
   }
 
   /**

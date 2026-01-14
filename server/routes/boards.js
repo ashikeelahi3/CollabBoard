@@ -268,4 +268,88 @@ router.post('/:id/members', async (req, res) => {
   }
 });
 
+/**
+ * @route   PUT /api/boards/:id/members/:userId
+ * @desc    Update member role
+ * @access  Private (Admin only)
+ */
+router.put('/:id/members/:userId', async (req, res) => {
+  try {
+    const { role } = req.body;
+    const board = await Board.findById(req.params.id);
+
+    if (!board) {
+      return res.status(404).json({ error: 'Board not found' });
+    }
+
+    // Check if user is admin
+    const userRole = board.getUserRole(req.user._id);
+    if (userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can update member roles' });
+    }
+
+    // Find member
+    const member = board.members.find(m => m.user.toString() === req.params.userId);
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    // Update role
+    member.role = role;
+    await board.save();
+
+    const updatedBoard = await Board.findById(board._id)
+      .populate('members.user', 'username email');
+
+    res.json({
+      message: 'Member role updated successfully',
+      board: updatedBoard
+    });
+  } catch (error) {
+    console.error('Update member error:', error);
+    res.status(500).json({ error: 'Failed to update member role' });
+  }
+});
+
+/**
+ * @route   DELETE /api/boards/:id/members/:userId
+ * @desc    Remove member from board
+ * @access  Private (Admin only)
+ */
+router.delete('/:id/members/:userId', async (req, res) => {
+  try {
+    const board = await Board.findById(req.params.id);
+
+    if (!board) {
+      return res.status(404).json({ error: 'Board not found' });
+    }
+
+    // Check if user is admin
+    const userRole = board.getUserRole(req.user._id);
+    if (userRole !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can remove members' });
+    }
+
+    // Cannot remove owner
+    if (board.owner.toString() === req.params.userId) {
+      return res.status(400).json({ error: 'Cannot remove board owner' });
+    }
+
+    // Remove member
+    board.members = board.members.filter(m => m.user.toString() !== req.params.userId);
+    await board.save();
+
+    const updatedBoard = await Board.findById(board._id)
+      .populate('members.user', 'username email');
+
+    res.json({
+      message: 'Member removed successfully',
+      board: updatedBoard
+    });
+  } catch (error) {
+    console.error('Remove member error:', error);
+    res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
 export default router;

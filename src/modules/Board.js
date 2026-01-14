@@ -56,7 +56,7 @@ export class Board {
         </div>
         <div class="board-actions">
           ${this.board.userRole === 'admin' ? 
-            '<button class="btn btn-secondary" id="add-member-btn">+ Add Member</button>' : 
+            '<button class="btn btn-secondary" id="manage-members-btn">👥 Manage Members</button>' : 
             ''}
           ${this.board.userRole !== 'viewer' ? 
             '<button class="btn btn-primary" id="add-column-btn">+ Add Column</button>' : 
@@ -101,6 +101,13 @@ export class Board {
 
   renderCard(card) {
     const canEdit = this.board.userRole !== 'viewer';
+    const priorityColors = {
+      low: '#95a5a6',
+      medium: '#3498db',
+      high: '#f39c12',
+      urgent: '#e74c3c'
+    };
+    
     return `
       <div class="card" data-card-id="${card._id}" draggable="${canEdit}">
         <div class="card-content">
@@ -114,7 +121,17 @@ export class Board {
             ` : ''}
           </div>
           ${card.description ? `<p>${card.description.substring(0, 100)}${card.description.length > 100 ? '...' : ''}</p>` : ''}
+          ${card.labels && card.labels.length > 0 ? `
+            <div class="card-labels">
+              ${card.labels.map(label => `
+                <span class="card-label" style="background-color: ${label.color}">${label.name}</span>
+              `).join('')}
+            </div>
+          ` : ''}
           <div class="card-meta">
+            <span class="card-priority" style="background-color: ${priorityColors[card.priority || 'medium']}">
+              ${(card.priority || 'medium').toUpperCase()}
+            </span>
             ${card.assignedTo?.length ? `
               <span class="card-assignee">👤 ${card.assignedTo[0].username}</span>
             ` : ''}
@@ -140,10 +157,10 @@ export class Board {
       };
     }
 
-    // Add member button
-    const addMemberBtn = document.getElementById('add-member-btn');
-    if (addMemberBtn) {
-      addMemberBtn.onclick = () => this.showAddMemberModal();
+    // Manage members button
+    const manageMembersBtn = document.getElementById('manage-members-btn');
+    if (manageMembersBtn) {
+      manageMembersBtn.onclick = () => this.showManageMembersModal();
     }
 
     // Add column button
@@ -309,6 +326,95 @@ export class Board {
     }
   }
 
+  showManageMembersModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    
+    const membersList = this.board.members.map(member => `
+      <div class="member-item">
+        <div class="member-info">
+          <span class="member-name">${member.user.username}</span>
+          <span class="member-email">${member.user.email}</span>
+        </div>
+        <div class="member-actions">
+          <select class="member-role-select" data-user-id="${member.user._id}">
+            <option value="viewer" ${member.role === 'viewer' ? 'selected' : ''}>Viewer</option>
+            <option value="member" ${member.role === 'member' ? 'selected' : ''}>Member</option>
+            <option value="admin" ${member.role === 'admin' ? 'selected' : ''}>Admin</option>
+          </select>
+          <button class="btn-icon btn-remove-member" data-user-id="${member.user._id}" title="Remove member">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+
+    modal.innerHTML = `
+      <div class="modal-content modal-wide">
+        <h2>Manage Members</h2>
+        <div class="members-list">
+          <div class="member-item owner-item">
+            <div class="member-info">
+              <span class="member-name">${this.board.owner.username} (Owner)</span>
+              <span class="member-email">${this.board.owner.email}</span>
+            </div>
+            <div class="member-role-badge">Admin</div>
+          </div>
+          ${membersList || '<p class="no-members">No members yet</p>'}
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-secondary" id="add-new-member-btn">+ Add Member</button>
+          <button class="btn btn-primary" id="close-members-modal">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
+
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    document.getElementById('close-members-modal').onclick = () => {
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+    };
+
+    document.getElementById('add-new-member-btn').onclick = () => {
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+      this.showAddMemberModal();
+    };
+
+    // Role change handlers
+    document.querySelectorAll('.member-role-select').forEach(select => {
+      select.onchange = async (e) => {
+        const userId = e.target.dataset.userId;
+        const newRole = e.target.value;
+        await this.updateMemberRole(userId, newRole);
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      };
+    });
+
+    // Remove member handlers
+    document.querySelectorAll('.btn-remove-member').forEach(btn => {
+      btn.onclick = async (e) => {
+        const userId = e.target.dataset.userId;
+        if (confirm('Remove this member from the board?')) {
+          await this.removeMember(userId);
+          modal.remove();
+          document.removeEventListener('keydown', escHandler);
+        }
+      };
+    });
+  }
+
   showAddMemberModal() {
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -412,12 +518,31 @@ export class Board {
         <h2>Add Card</h2>
         <form id="add-card-form">
           <div class="form-group">
-            <label>Card Title</label>
+            <label>Card Title *</label>
             <input type="text" id="card-title" required maxlength="200" placeholder="Enter card title">
           </div>
           <div class="form-group">
-            <label>Description (optional)</label>
+            <label>Description</label>
             <textarea id="card-description" rows="3" maxlength="2000" placeholder="Enter card description"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Priority</label>
+              <select id="card-priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Due Date</label>
+              <input type="date" id="card-due-date">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Labels (comma-separated)</label>
+            <input type="text" id="card-labels" placeholder="e.g., bug, feature, urgent">
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" id="cancel-card">Cancel</button>
@@ -428,12 +553,10 @@ export class Board {
     `;
     document.body.appendChild(modal);
 
-    // Close on outside click
     modal.onclick = (e) => {
       if (e.target === modal) modal.remove();
     };
 
-    // Close on ESC key
     const escHandler = (e) => {
       if (e.key === 'Escape') {
         modal.remove();
@@ -442,7 +565,6 @@ export class Board {
     };
     document.addEventListener('keydown', escHandler);
 
-    // Cancel button
     document.getElementById('cancel-card').onclick = () => modal.remove();
 
     document.getElementById('add-card-form').onsubmit = async (e) => {
@@ -454,24 +576,40 @@ export class Board {
   }
 
   async deleteColumn(columnId) {
-    if (!confirm('Delete this column and all its cards?')) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <h2 style="color: #dc2626;">Delete Column</h2>
+        <p style="margin: 1rem 0; color: #374151;">Delete this column and all its cards? This action cannot be undone.</p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirm-delete-column-btn">Delete</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
 
-    try {
-      await apiClient.delete(`/columns/${columnId}`);
-      
-      eventBus.emit(EVENTS.NOTIFICATION, {
-        message: 'Column deleted successfully!',
-        type: 'success'
-      });
-      
-      await this.load();
-    } catch (error) {
-      console.error('Delete column error:', error);
-      eventBus.emit(EVENTS.NOTIFICATION, {
-        message: error.message || 'Failed to delete column',
-        type: 'error'
-      });
-    }
+    document.getElementById('confirm-delete-column-btn').addEventListener('click', async () => {
+      try {
+        await apiClient.delete(`/columns/${columnId}`);
+        
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: 'Column deleted successfully!',
+          type: 'success'
+        });
+        
+        await this.load();
+        modal.remove();
+      } catch (error) {
+        console.error('Delete column error:', error);
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: error.message || 'Failed to delete column',
+          type: 'error'
+        });
+        modal.remove();
+      }
+    });
   }
 
   showEditColumnModal(columnId) {
@@ -540,29 +678,48 @@ export class Board {
   }
 
   async deleteCard(cardId) {
-    if (!confirm('Are you sure you want to delete this card?')) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <h2 style="color: #dc2626;">Delete Card</h2>
+        <p style="margin: 1rem 0; color: #374151;">Are you sure you want to delete this card? This action cannot be undone.</p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirm-delete-card-btn">Delete</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
 
-    try {
-      await apiClient.delete(`/cards/${cardId}`);
-      
-      eventBus.emit(EVENTS.NOTIFICATION, {
-        message: 'Card deleted successfully!',
-        type: 'success'
-      });
-      
-      await this.load();
-    } catch (error) {
-      console.error('Delete card error:', error);
-      eventBus.emit(EVENTS.NOTIFICATION, {
-        message: error.message || 'Failed to delete card',
-        type: 'error'
-      });
-    }
+    document.getElementById('confirm-delete-card-btn').addEventListener('click', async () => {
+      try {
+        await apiClient.delete(`/cards/${cardId}`);
+        
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: 'Card deleted successfully!',
+          type: 'success'
+        });
+        
+        await this.load();
+        modal.remove();
+      } catch (error) {
+        console.error('Delete card error:', error);
+        eventBus.emit(EVENTS.NOTIFICATION, {
+          message: error.message || 'Failed to delete card',
+          type: 'error'
+        });
+        modal.remove();
+      }
+    });
   }
 
   showEditCardModal(cardId) {
     const card = this.findCardById(cardId);
     if (!card) return;
+
+    const dueDateValue = card.dueDate ? new Date(card.dueDate).toISOString().split('T')[0] : '';
+    const labelsValue = card.labels?.map(l => l.name).join(', ') || '';
 
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -571,12 +728,31 @@ export class Board {
         <h2>Edit Card</h2>
         <form id="edit-card-form">
           <div class="form-group">
-            <label>Card Title</label>
+            <label>Card Title *</label>
             <input type="text" id="edit-card-title" required maxlength="200" value="${card.title}">
           </div>
           <div class="form-group">
-            <label>Description (optional)</label>
+            <label>Description</label>
             <textarea id="edit-card-description" rows="3" maxlength="2000">${card.description || ''}</textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Priority</label>
+              <select id="edit-card-priority">
+                <option value="low" ${card.priority === 'low' ? 'selected' : ''}>Low</option>
+                <option value="medium" ${card.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="high" ${card.priority === 'high' ? 'selected' : ''}>High</option>
+                <option value="urgent" ${card.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Due Date</label>
+              <input type="date" id="edit-card-due-date" value="${dueDateValue}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Labels (comma-separated)</label>
+            <input type="text" id="edit-card-labels" placeholder="e.g., bug, feature, urgent" value="${labelsValue}">
           </div>
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" id="cancel-edit-card">Cancel</button>
@@ -609,25 +785,69 @@ export class Board {
     };
   }
 
-  async updateCard(cardId) {
+  getRandomColor() {
+    const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  async addMember() {
     try {
-      const title = document.getElementById('edit-card-title').value;
-      const description = document.getElementById('edit-card-description').value;
+      const email = document.getElementById('member-email').value;
+      const role = document.getElementById('member-role').value;
       
-      await apiClient.put(`/cards/${cardId}`, { 
-        title, 
-        description
+      const response = await apiClient.post(`/boards/${this.boardId}/members`, { 
+        email, 
+        role 
       });
       
+      console.log('Member added, board data:', response.board);
+      console.log('Members array:', response.board.members);
+      
       eventBus.emit(EVENTS.NOTIFICATION, { 
-        message: 'Card updated successfully!', 
+        message: 'Member added successfully!', 
         type: 'success' 
       });
       
       await this.load();
     } catch (error) {
       eventBus.emit(EVENTS.NOTIFICATION, { 
-        message: error.message || 'Failed to update card', 
+        message: error.message, 
+        type: 'error' 
+      });
+    }
+  }
+
+  async updateMemberRole(userId, newRole) {
+    try {
+      await apiClient.put(`/boards/${this.boardId}/members/${userId}`, { role: newRole });
+      
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: 'Member role updated!', 
+        type: 'success' 
+      });
+      
+      await this.load();
+    } catch (error) {
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: error.message, 
+        type: 'error' 
+      });
+    }
+  }
+
+  async removeMember(userId) {
+    try {
+      await apiClient.delete(`/boards/${this.boardId}/members/${userId}`);
+      
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: 'Member removed!', 
+        type: 'success' 
+      });
+      
+      await this.load();
+    } catch (error) {
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: error.message, 
         type: 'error' 
       });
     }
@@ -676,14 +896,25 @@ export class Board {
     try {
       const title = document.getElementById('card-title').value;
       const description = document.getElementById('card-description').value;
+      const priority = document.getElementById('card-priority').value;
+      const dueDate = document.getElementById('card-due-date').value;
+      const labelsInput = document.getElementById('card-labels').value;
+      
+      const labels = labelsInput
+        .split(',')
+        .map(l => l.trim())
+        .filter(l => l)
+        .map(name => ({ name, color: this.getRandomColor() }));
       
       const data = await apiClient.post('/cards', { 
         title, 
         description, 
-        columnId 
+        columnId,
+        priority,
+        dueDate: dueDate || undefined,
+        labels
       });
       
-      // Emit socket event
       socketService.emitCardCreated(this.boardId, data.card);
       
       eventBus.emit(EVENTS.NOTIFICATION, { 
@@ -700,31 +931,45 @@ export class Board {
     }
   }
 
-  async addMember() {
+  async updateCard(cardId) {
     try {
-      const email = document.getElementById('member-email').value;
-      const role = document.getElementById('member-role').value;
+      const title = document.getElementById('edit-card-title').value;
+      const description = document.getElementById('edit-card-description').value;
+      const priority = document.getElementById('edit-card-priority').value;
+      const dueDate = document.getElementById('edit-card-due-date').value;
+      const labelsInput = document.getElementById('edit-card-labels').value;
       
-      const response = await apiClient.post(`/boards/${this.boardId}/members`, { 
-        email, 
-        role 
+      const labels = labelsInput
+        .split(',')
+        .map(l => l.trim())
+        .filter(l => l)
+        .map(name => ({ name, color: this.getRandomColor() }));
+      
+      await apiClient.put(`/cards/${cardId}`, { 
+        title, 
+        description,
+        priority,
+        dueDate: dueDate || undefined,
+        labels
       });
       
-      console.log('Member added, board data:', response.board);
-      console.log('Members array:', response.board.members);
-      
       eventBus.emit(EVENTS.NOTIFICATION, { 
-        message: 'Member added successfully!', 
+        message: 'Card updated successfully!', 
         type: 'success' 
       });
       
       await this.load();
     } catch (error) {
       eventBus.emit(EVENTS.NOTIFICATION, { 
-        message: error.message, 
+        message: error.message || 'Failed to update card', 
         type: 'error' 
       });
     }
+  }
+
+  getRandomColor() {
+    const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+    return colors[Math.floor(Math.random() * colors.length)];
   }
 
   /**

@@ -174,11 +174,13 @@ body {
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
+  font-size: 0.95rem;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid #d1d5db;
@@ -187,7 +189,8 @@ body {
   transition: border-color 0.2s ease;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -345,13 +348,18 @@ body {
   padding: 2rem;
   border-radius: 1rem;
   width: 90%;
-  max-width: 500px;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .modal-content h2 {
   margin-bottom: 1.5rem;
   color: #1e293b;
+  font-size: 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.75rem;
 }
 
 .modal-content textarea {
@@ -422,8 +430,8 @@ body {
 /* Board Columns Layout */
 .board-columns {
   display: flex;
+  flex-wrap: wrap;
   gap: 1.5rem;
-  overflow-x: auto;
   padding: 1rem;
   min-height: 500px;
 }
@@ -432,8 +440,9 @@ body {
   background: #f1f5f9;
   border-radius: 0.5rem;
   padding: 1rem;
-  min-width: 300px;
-  max-width: 300px;
+  flex: 1 1 300px;
+  min-width: 280px;
+  max-width: 350px;
   display: flex;
   flex-direction: column;
 }
@@ -458,16 +467,28 @@ body {
 }
 
 .column-header-actions .btn-icon {
-  opacity: 0;
-  transition: opacity 0.2s;
+  background: white;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
 }
 
 .column:hover .column-header-actions .btn-icon {
-  opacity: 0.6;
+  opacity: 1;
 }
 
 .column-header-actions .btn-icon:hover {
-  opacity: 1;
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.column-header-actions .btn-icon[data-action="delete-column"]:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #dc2626;
 }
 
 .card-count {
@@ -560,7 +581,7 @@ body {
 .card-actions {
   display: flex;
   gap: 0.25rem;
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.2s;
 }
 
@@ -569,17 +590,24 @@ body {
 }
 
 .btn-icon {
-  background: none;
-  border: none;
+  background: white;
+  border: 1px solid #d1d5db;
   cursor: pointer;
-  padding: 0.25rem;
-  font-size: 1rem;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.9rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
 }
 
 .btn-icon:hover {
-  opacity: 1;
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.btn-icon[data-action="delete"]:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #dc2626;
 }
 
 .card-content p {
@@ -605,13 +633,21 @@ body {
 }
 
 /* Responsive Board View */
+@media (max-width: 1024px) {
+  .column {
+    flex: 1 1 calc(50% - 0.75rem);
+    max-width: none;
+  }
+}
+
 @media (max-width: 768px) {
   .board-columns {
     flex-direction: column;
-    overflow-x: visible;
+    padding: 0.5rem;
   }
   
   .column {
+    flex: 1 1 100%;
     min-width: 100%;
     max-width: 100%;
   }
@@ -620,10 +656,341 @@ body {
     flex-direction: column;
     align-items: stretch;
     gap: 1rem;
+    padding: 0.75rem;
   }
   
   .board-info {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.5rem;
   }
+  
+  .board-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .board-actions button {
+    width: 100%;
+  }
+}
+
+
+/* Member Management Modal */
+.modal-wide {
+  max-width: 600px;
+  width: 90%;
+}
+
+.members-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 20px 0;
+}
+
+.member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+}
+
+.owner-item {
+  background: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.member-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.member-email {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.member-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.member-role-select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.member-role-badge {
+  padding: 6px 12px;
+  background: #4caf50;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-remove-member {
+  padding: 6px 10px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-remove-member:hover {
+  background: #d32f2f;
+}
+
+.no-members {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+  font-style: italic;
+}
+
+
+/* Form Row Layout */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* Card Priority Badge */
+.card-priority {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+}
+
+/* Card Labels */
+.card-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 8px 0;
+}
+
+.card-label {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  color: white;
+  font-weight: 500;
+}
+
+/* Card Meta Improvements */
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.card-assignee, .card-due {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+
+/* Clean Modern Board Cards */
+.board-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  border: 1px solid #e1e4e8;
+}
+
+.board-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-color: #0366d6;
+}
+
+.board-card-header {
+  padding: 20px;
+  color: white;
+  font-weight: 600;
+}
+
+.board-card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.board-card-body {
+  padding: 20px;
+  background: white;
+  display: block;
+}
+
+.board-description {
+  color: #24292e !important;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+  min-height: 42px;
+  display: block;
+}
+
+.board-stats {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid #e1e4e8;
+  border-bottom: 1px solid #e1e4e8;
+  margin-bottom: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: #6a737d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #24292e;
+}
+
+.board-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.board-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-edit-board,
+.btn-delete-board {
+  background: white;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+
+.btn-edit-board:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.btn-delete-board:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.board-owner {
+  font-size: 0.85rem;
+  color: #586069;
+}
+
+.btn-view {
+  padding: 6px 16px;
+  background: #0366d6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.btn-view:hover {
+  background: #0256c7;
+}
+
+.btn-danger {
+  padding: 6px 16px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* Clean Empty State */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 8px;
+  border: 2px dashed #d1d5da;
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px 0;
+  color: #24292e;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.empty-state p {
+  margin: 0 0 20px 0;
+  color: #586069;
+  font-size: 0.95rem;
 }
