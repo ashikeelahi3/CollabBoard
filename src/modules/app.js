@@ -6,6 +6,7 @@ import { stateManager } from './StateManager.js';
 import { eventBus, EVENTS } from './EventBus.js';
 import { apiClient } from './ApiClient.js';
 import { Board } from './Board.js';
+import { socketService } from './SocketService.js';
 
 class App {
   constructor() {
@@ -295,6 +296,9 @@ class App {
     // Add logout handler
     document.getElementById('logout-btn').addEventListener('click', this.handleLogout.bind(this));
     
+    // Connect socket
+    socketService.connect();
+    
     // Load boards
     this.loadBoards();
   }
@@ -329,17 +333,19 @@ class App {
         </div>
       `;
     } else {
-      boardsGrid.innerHTML = boards.map(board => `
-        <div class="board-card" data-board-id="${board._id}" style="background: ${board.background}">
-          <h3>${board.title}</h3>
-          <p>${board.description || 'No description'}</p>
-          <div class="board-meta">
-            <span>Owner: ${board.owner.username}</span>
-            <span>${board.memberCount || 1} members</span>
+      boardsGrid.innerHTML = boards.map(board => {
+        const memberCount = 1 + (board.members?.length || 0);
+        return `
+          <div class="board-card" data-board-id="${board._id}" style="background: ${board.background}">
+            <h3>${board.title}</h3>
+            <p>${board.description || 'No description'}</p>
+            <div class="board-meta">
+              <span>Owner: ${board.owner.username}</span>
+              <span>👥 ${memberCount} member${memberCount !== 1 ? 's' : ''}</span>
+            </div>
           </div>
-        </div>
-      `).join('');
-
+        `;
+      }).join('');
       // Add click handlers to board cards
       document.querySelectorAll('.board-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -425,6 +431,9 @@ class App {
    * Handle logout
    */
   handleLogout() {
+    // Disconnect socket
+    socketService.disconnect();
+    
     // Clear storage
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');

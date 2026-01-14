@@ -222,7 +222,7 @@ router.delete('/:id', async (req, res) => {
  */
 router.post('/:id/members', async (req, res) => {
   try {
-    const { userId, role } = req.body;
+    const { email, role } = req.body;
     const board = await Board.findById(req.params.id);
 
     if (!board) {
@@ -235,13 +235,21 @@ router.post('/:id/members', async (req, res) => {
       return res.status(403).json({ error: 'Only admins can add members' });
     }
 
+    // Find user by email
+    const User = (await import('../models/User.js')).default;
+    const userToAdd = await User.findOne({ email });
+    
+    if (!userToAdd) {
+      return res.status(404).json({ error: 'User not found with this email' });
+    }
+
     // Check if user already a member
-    if (board.members.some(m => m.user.toString() === userId)) {
+    if (board.members.some(m => m.user.toString() === userToAdd._id.toString())) {
       return res.status(400).json({ error: 'User is already a member' });
     }
 
     board.members.push({
-      user: userId,
+      user: userToAdd._id,
       role: role || 'member'
     });
 

@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import boardRoutes from './routes/boards.js';
 import columnRoutes from './routes/columns.js';
 import cardRoutes from './routes/cards.js';
+import { setupSocketHandlers } from './socket/handlers.js';
 
 // Load environment variables
 dotenv.config();
@@ -50,14 +51,8 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../src/index.html'));
 });
 
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
+// Socket.io setup
+setupSocketHandlers(io);
 
 const PORT = process.env.PORT || 3000;
 
