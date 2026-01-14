@@ -17,8 +17,8 @@ const columnSchema = new mongoose.Schema({
   },
   position: {
     type: Number,
-    required: true,
-    min: 0
+    min: 0,
+    default: 0
   },
   settings: {
     cardLimit: {
@@ -44,7 +44,7 @@ columnSchema.index({ board: 1, isArchived: 1, position: 1 });
 
 // Pre-save middleware to manage positions
 columnSchema.pre('save', async function(next) {
-  if (this.isNew && this.position === undefined) {
+  if (this.isNew) {
     try {
       const maxPosition = await this.constructor.findOne(
         { board: this.board, isArchived: false },
