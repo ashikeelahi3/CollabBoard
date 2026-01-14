@@ -7,6 +7,9 @@ import { eventBus, EVENTS } from './EventBus.js';
 import { apiClient } from './ApiClient.js';
 import { Board } from './Board.js';
 import { socketService } from './SocketService.js';
+import './Notification.js';
+import './LoadingManager.js';
+import './KeyboardShortcuts.js';
 
 class App {
   constructor() {
@@ -142,6 +145,7 @@ class App {
     
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
+    const submitBtn = event.target.querySelector('button[type="submit"]');
 
     if (!email || !password) {
       this.showNotification('Please fill in all fields', 'error');
@@ -149,6 +153,8 @@ class App {
     }
 
     try {
+      window.loadingManager.showButtonLoading(submitBtn, 'Logging in...');
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -163,19 +169,18 @@ class App {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store token and user data
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       this.currentUser = data.user;
       this.showNotification('Login successful!', 'success');
-      
-      // Hide auth forms and show dashboard
       this.showDashboard();
       
     } catch (error) {
       console.error('Login error:', error);
       this.showNotification(error.message || 'Login failed. Please try again.', 'error');
+    } finally {
+      window.loadingManager.hideButtonLoading(submitBtn);
     }
   }
 
@@ -188,6 +193,7 @@ class App {
     const username = document.getElementById('register-username').value;
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
+    const submitBtn = event.target.querySelector('button[type="submit"]');
 
     if (!username || !email || !password) {
       this.showNotification('Please fill in all fields', 'error');
@@ -200,6 +206,8 @@ class App {
     }
 
     try {
+      window.loadingManager.showButtonLoading(submitBtn, 'Creating account...');
+      
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -214,19 +222,18 @@ class App {
         throw new Error(data.error || 'Registration failed');
       }
 
-      // Store token and user data
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       this.currentUser = data.user;
       this.showNotification('Registration successful! Welcome!', 'success');
-      
-      // Hide auth forms and show dashboard
       this.showDashboard();
       
     } catch (error) {
       console.error('Register error:', error);
       this.showNotification(error.message || 'Registration failed. Please try again.', 'error');
+    } finally {
+      window.loadingManager.hideButtonLoading(submitBtn);
     }
   }
 
@@ -234,72 +241,32 @@ class App {
    * Show notification to user
    */
   showNotification(message, type = 'info') {
-    const container = document.getElementById('notifications');
-    const notification = document.createElement('div');
-    
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-      <span>${message}</span>
-      <button onclick="this.parentElement.remove()">&times;</button>
-    `;
-    
-    // Add notification styles
-    notification.style.cssText = `
-      background: ${type === 'error' ? '#fee2e2' : type === 'success' ? '#dcfce7' : '#dbeafe'};
-      color: ${type === 'error' ? '#dc2626' : type === 'success' ? '#16a34a' : '#2563eb'};
-      padding: 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid ${type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'};
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      min-width: 300px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    `;
-    
-    notification.querySelector('button').style.cssText = `
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-      margin-left: 1rem;
-    `;
-    
-    container.appendChild(notification);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      if (notification.parentElement) {
-        notification.remove();
-      }
-    }, 5000);
+    if (window.notification) {
+      window.notification.show(message, type);
+    }
   }
 
   /**
    * Show dashboard after successful authentication
    */
   showDashboard() {
-    // Hide all other screens
     document.getElementById('welcome').classList.add('hidden');
     document.getElementById('auth-container').classList.add('hidden');
-    
-    // Show dashboard
     document.getElementById('dashboard').classList.remove('hidden');
     
-    // Update header
     const navMenu = document.querySelector('.nav-menu');
     navMenu.innerHTML = `
       <span>Welcome, ${this.currentUser.username}!</span>
+      <button id="profile-btn" class="btn btn-secondary" title="Profile">👤</button>
+      <button id="shortcuts-btn" class="btn btn-secondary" title="Keyboard Shortcuts">⌨️</button>
       <button id="logout-btn" class="btn btn-secondary">Logout</button>
     `;
     
-    // Add logout handler
+    document.getElementById('profile-btn').addEventListener('click', this.showProfile.bind(this));
+    document.getElementById('shortcuts-btn').addEventListener('click', () => window.keyboardShortcuts.showHelp());
     document.getElementById('logout-btn').addEventListener('click', this.handleLogout.bind(this));
     
-    // Connect socket
     socketService.connect();
-    
-    // Load boards
     this.loadBoards();
   }
 
@@ -551,6 +518,74 @@ class App {
         modal.remove();
       }
     });
+  }
+
+  /**
+   * Show user profile modal
+   */
+  showProfile() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>👤 User Profile</h2>
+        <form id="profile-form">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="profile-username" value="${this.currentUser.username}" required maxlength="30">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="profile-email" value="${this.currentUser.email}" required>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.updateProfile();
+      // Modal will close automatically on success, stay open on error
+    });
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile() {
+    const submitBtn = document.querySelector('#profile-form button[type="submit"]');
+    
+    try {
+      const username = document.getElementById('profile-username').value;
+      const email = document.getElementById('profile-email').value;
+
+      window.loadingManager.showButtonLoading(submitBtn, 'Saving...');
+      
+      const data = await apiClient.put('/auth/profile', { username, email });
+      
+      this.currentUser = data.user;
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      this.showNotification('Profile updated successfully!', 'success');
+      
+      const navMenu = document.querySelector('.nav-menu span');
+      if (navMenu) navMenu.textContent = `Welcome, ${this.currentUser.username}!`;
+      
+      // Close modal on success
+      document.querySelector('.modal')?.remove();
+    } catch (error) {
+      console.error('Update profile error:', error);
+      this.showNotification(error.message || 'Failed to update profile', 'error');
+      // Don't close modal on error
+    } finally {
+      window.loadingManager.hideButtonLoading(submitBtn);
+    }
   }
 
   /**
