@@ -203,13 +203,13 @@ const deploymentOptions = {
 # Environment variables for production
 NODE_ENV=production
 PORT=process.env.PORT || 3000
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/collabboard
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/projectName
 JWT_SECRET=super-secure-production-secret
 CORS_ORIGIN=https://your-domain.com
 
 # PM2 for process management (if using VPS)
 npm install -g pm2
-pm2 start server/server.js --name "collabboard"
+pm2 start server/server.js --name "projectName"
 pm2 startup
 pm2 save
 ```

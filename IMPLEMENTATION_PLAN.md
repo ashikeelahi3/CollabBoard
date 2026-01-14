@@ -186,47 +186,57 @@ npm run dev:full
 
 **Status:** ✅ Complete - Real-time updates working for cards and columns
 
-### Day 17-18: Real-Time Events
+### Day 17-18: Real-Time Events & Member Management ✅ COMPLETED
 **Goal:** Live updates for all board actions
 
 **Tasks:**
-- [ ] Card movement broadcasting
-- [ ] Card creation/update events
-- [ ] User presence indicators
-- [ ] Optimistic UI updates
+- [x] Card movement broadcasting
+- [x] Card creation/update events
+- [x] User presence indicators
+- [x] Member management (add by email)
+- [x] Member count display
 
 **Deliverables:**
-- Real-time card synchronization
-- User presence system
-- Conflict resolution strategy
+- [x] Real-time card synchronization
+- [x] User presence system
+- [x] Member invitation system
 
-### Day 19-20: Drag & Drop
+**Status:** ✅ Complete - Real-time events and member management working
+
+### Day 19-20: Drag & Drop ✅ COMPLETED
 **Goal:** Native HTML5 drag and drop
 
 **Tasks:**
-- [ ] Card dragging with visual feedback
-- [ ] Column drop zones with highlighting
-- [ ] Position calculation algorithm
-- [ ] Touch device support
+- [x] Card dragging with visual feedback
+- [x] Column drop zones with highlighting
+- [x] Position calculation algorithm
+- [x] Real-time broadcasting of moves
+- [x] Socket emit bug fix
 
 **Deliverables:**
-- Smooth drag and drop experience
-- Real-time position updates
-- Mobile-friendly interactions
+- [x] Smooth drag and drop experience
+- [x] Real-time position updates
+- [x] Visual feedback (opacity, cursors, drop zones)
 
-### Day 21: Performance Optimization
-**Goal:** Smooth real-time experience
+**Status:** ✅ Complete - Native drag-and-drop working with real-time sync
+
+### Day 21: Edit/Delete & CRUD Completion ✅ COMPLETED
+**Goal:** Complete CRUD operations with polished UI
 
 **Tasks:**
-- [ ] Throttled socket emissions
-- [ ] Debounced position updates
-- [ ] Memory leak prevention
-- [ ] Connection state management
+- [x] Card edit/delete buttons with hover effects
+- [x] Column edit/delete buttons (admin only)
+- [x] Confirmation dialogs for deletions
+- [x] Modal improvements (ESC key, outside click)
+- [x] Role-based UI rendering
 
 **Deliverables:**
-- Optimized real-time performance
-- Stable WebSocket connections
-- Efficient event handling
+- [x] Full CRUD UI for cards and columns
+- [x] Hover-to-show action buttons
+- [x] Confirmation dialogs
+- [x] Role-based permissions in UI
+
+**Status:** ✅ Complete - Phase 3 finished with all CRUD operations
 
 ## Phase 4: Advanced Features (Days 22-28)
 

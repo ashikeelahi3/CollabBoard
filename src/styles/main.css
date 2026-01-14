@@ -448,6 +448,26 @@ body {
 .column-header h3 {
   font-size: 1.1rem;
   color: #1e293b;
+  flex: 1;
+}
+
+.column-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.column-header-actions .btn-icon {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.column:hover .column-header-actions .btn-icon {
+  opacity: 0.6;
+}
+
+.column-header-actions .btn-icon:hover {
+  opacity: 1;
 }
 
 .card-count {
@@ -508,10 +528,58 @@ body {
   opacity: 0.5;
 }
 
+.card.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.column-cards.drag-over {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 2px dashed #3b82f6;
+  border-radius: 0.5rem;
+}
+
 .card-content h4 {
   font-size: 1rem;
   color: #1e293b;
   margin-bottom: 0.5rem;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.card-header-row h4 {
+  margin: 0;
+  flex: 1;
+}
+
+.card-actions {
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.card:hover .card-actions {
+  opacity: 1;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 1rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+  opacity: 1;
 }
 
 .card-content p {

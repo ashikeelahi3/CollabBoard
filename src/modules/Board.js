@@ -72,16 +72,25 @@ export class Board {
   }
 
   renderColumn(column) {
+    const canEdit = this.board.userRole !== 'viewer';
+    const isAdmin = this.board.userRole === 'admin';
+    
     return `
       <div class="column" data-column-id="${column._id}">
         <div class="column-header">
           <h3>${column.title}</h3>
-          <span class="card-count">${column.cards?.length || 0}</span>
+          <div class="column-header-actions">
+            <span class="card-count">${column.cards?.length || 0}</span>
+            ${isAdmin ? `
+              <button class="btn-icon" data-action="edit-column" data-column-id="${column._id}" title="Edit column">✏️</button>
+              <button class="btn-icon" data-action="delete-column" data-column-id="${column._id}" title="Delete column">🗑️</button>
+            ` : ''}
+          </div>
         </div>
         <div class="column-cards" data-column-id="${column._id}">
           ${column.cards?.map(card => this.renderCard(card)).join('') || ''}
         </div>
-        ${this.board.userRole !== 'viewer' ? `
+        ${canEdit ? `
           <button class="btn-add-card" data-column-id="${column._id}">
             + Add Card
           </button>
@@ -91,10 +100,19 @@ export class Board {
   }
 
   renderCard(card) {
+    const canEdit = this.board.userRole !== 'viewer';
     return `
-      <div class="card" data-card-id="${card._id}" draggable="${this.board.userRole !== 'viewer'}">
+      <div class="card" data-card-id="${card._id}" draggable="${canEdit}">
         <div class="card-content">
-          <h4>${card.title}</h4>
+          <div class="card-header-row">
+            <h4>${card.title}</h4>
+            ${canEdit ? `
+              <div class="card-actions">
+                <button class="btn-icon" onclick="event.stopPropagation()" data-action="edit" data-card-id="${card._id}" title="Edit card">✏️</button>
+                <button class="btn-icon" onclick="event.stopPropagation()" data-action="delete" data-card-id="${card._id}" title="Delete card">🗑️</button>
+              </div>
+            ` : ''}
+          </div>
           ${card.description ? `<p>${card.description.substring(0, 100)}${card.description.length > 100 ? '...' : ''}</p>` : ''}
           <div class="card-meta">
             ${card.assignedTo?.length ? `
@@ -142,13 +160,153 @@ export class Board {
       };
     });
 
-    // Card click to view details
-    document.querySelectorAll('.card').forEach(card => {
-      card.onclick = () => {
-        const cardId = card.dataset.cardId;
-        this.showCardDetails(cardId);
-      };
+    // Setup drag and drop
+    this.setupDragAndDrop();
+
+    // Card action buttons
+    document.querySelectorAll('.card-actions button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        const cardId = btn.dataset.cardId;
+        
+        if (action === 'edit') {
+          this.showEditCardModal(cardId);
+        } else if (action === 'delete') {
+          this.deleteCard(cardId);
+        }
+      });
     });
+
+    // Column action buttons
+    document.querySelectorAll('.column-header-actions button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        const columnId = btn.dataset.columnId;
+        
+        if (action === 'edit-column') {
+          this.showEditColumnModal(columnId);
+        } else if (action === 'delete-column') {
+          this.deleteColumn(columnId);
+        }
+      });
+    });
+  }
+
+  setupDragAndDrop() {
+    if (this.board.userRole === 'viewer') return;
+
+    // Card drag events
+    document.querySelectorAll('.card').forEach(card => {
+      card.addEventListener('dragstart', this.handleDragStart.bind(this));
+      card.addEventListener('dragend', this.handleDragEnd.bind(this));
+    });
+
+    // Column drop zone events
+    document.querySelectorAll('.column-cards').forEach(zone => {
+      zone.addEventListener('dragover', this.handleDragOver.bind(this));
+      zone.addEventListener('drop', this.handleDrop.bind(this));
+      zone.addEventListener('dragenter', this.handleDragEnter.bind(this));
+      zone.addEventListener('dragleave', this.handleDragLeave.bind(this));
+    });
+  }
+
+  handleDragStart(e) {
+    const card = e.target.closest('.card');
+    if (!card) return;
+
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.cardId);
+    
+    card.classList.add('dragging');
+    this.draggedCard = card;
+  }
+
+  handleDragEnd(e) {
+    const card = e.target.closest('.card');
+    if (card) {
+      card.classList.remove('dragging');
+    }
+    
+    document.querySelectorAll('.column-cards').forEach(zone => {
+      zone.classList.remove('drag-over');
+    });
+    
+    this.draggedCard = null;
+  }
+
+  handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  handleDragEnter(e) {
+    const zone = e.target.closest('.column-cards');
+    if (zone) {
+      zone.classList.add('drag-over');
+    }
+  }
+
+  handleDragLeave(e) {
+    const zone = e.target.closest('.column-cards');
+    if (zone && !zone.contains(e.relatedTarget)) {
+      zone.classList.remove('drag-over');
+    }
+  }
+
+  async handleDrop(e) {
+    e.preventDefault();
+    
+    const zone = e.target.closest('.column-cards');
+    if (!zone) return;
+
+    zone.classList.remove('drag-over');
+
+    const cardId = e.dataTransfer.getData('text/plain');
+    const targetColumnId = zone.dataset.columnId;
+    
+    // Find source column
+    const cardElement = document.querySelector(`[data-card-id="${cardId}"]`);
+    const sourceColumnId = cardElement.closest('.column-cards').dataset.columnId;
+
+    // Don't move if same column
+    if (sourceColumnId === targetColumnId) return;
+
+    // Calculate position
+    const cards = Array.from(zone.querySelectorAll('.card:not(.dragging)'));
+    const position = cards.length;
+
+    try {
+      // Move card via API
+      await apiClient.put(`/cards/${cardId}/move`, {
+        targetColumnId,
+        position
+      });
+
+      // Emit socket event
+      socketService.socket.emit('card:moved', {
+        cardId,
+        sourceColumnId,
+        targetColumnId,
+        position,
+        boardId: this.boardId
+      });
+
+      // Reload board
+      await this.load();
+
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: 'Card moved successfully!',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Move card error:', error);
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: error.message || 'Failed to move card',
+        type: 'error'
+      });
+    }
   }
 
   showAddMemberModal() {
@@ -295,6 +453,194 @@ export class Board {
     };
   }
 
+  async deleteColumn(columnId) {
+    if (!confirm('Delete this column and all its cards?')) return;
+
+    try {
+      await apiClient.delete(`/columns/${columnId}`);
+      
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: 'Column deleted successfully!',
+        type: 'success'
+      });
+      
+      await this.load();
+    } catch (error) {
+      console.error('Delete column error:', error);
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: error.message || 'Failed to delete column',
+        type: 'error'
+      });
+    }
+  }
+
+  showEditColumnModal(columnId) {
+    const column = this.columns.find(c => c._id === columnId);
+    if (!column) return;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>Edit Column</h2>
+        <form id="edit-column-form">
+          <div class="form-group">
+            <label>Column Title</label>
+            <input type="text" id="edit-column-title" required maxlength="50" value="${column.title}">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancel-edit-column">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
+
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    document.getElementById('cancel-edit-column').onclick = () => modal.remove();
+
+    document.getElementById('edit-column-form').onsubmit = async (e) => {
+      e.preventDefault();
+      await this.updateColumn(columnId);
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+    };
+  }
+
+  async updateColumn(columnId) {
+    try {
+      const title = document.getElementById('edit-column-title').value;
+      
+      await apiClient.put(`/columns/${columnId}`, { title });
+      
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: 'Column updated successfully!', 
+        type: 'success' 
+      });
+      
+      await this.load();
+    } catch (error) {
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: error.message || 'Failed to update column', 
+        type: 'error' 
+      });
+    }
+  }
+
+  async deleteCard(cardId) {
+    if (!confirm('Are you sure you want to delete this card?')) return;
+
+    try {
+      await apiClient.delete(`/cards/${cardId}`);
+      
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: 'Card deleted successfully!',
+        type: 'success'
+      });
+      
+      await this.load();
+    } catch (error) {
+      console.error('Delete card error:', error);
+      eventBus.emit(EVENTS.NOTIFICATION, {
+        message: error.message || 'Failed to delete card',
+        type: 'error'
+      });
+    }
+  }
+
+  showEditCardModal(cardId) {
+    const card = this.findCardById(cardId);
+    if (!card) return;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>Edit Card</h2>
+        <form id="edit-card-form">
+          <div class="form-group">
+            <label>Card Title</label>
+            <input type="text" id="edit-card-title" required maxlength="200" value="${card.title}">
+          </div>
+          <div class="form-group">
+            <label>Description (optional)</label>
+            <textarea id="edit-card-description" rows="3" maxlength="2000">${card.description || ''}</textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancel-edit-card">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
+
+    const escHandler = (e) => {
+      if (e.key === 'Escape') {
+        modal.remove();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    document.getElementById('cancel-edit-card').onclick = () => modal.remove();
+
+    document.getElementById('edit-card-form').onsubmit = async (e) => {
+      e.preventDefault();
+      await this.updateCard(cardId);
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+    };
+  }
+
+  async updateCard(cardId) {
+    try {
+      const title = document.getElementById('edit-card-title').value;
+      const description = document.getElementById('edit-card-description').value;
+      
+      await apiClient.put(`/cards/${cardId}`, { 
+        title, 
+        description
+      });
+      
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: 'Card updated successfully!', 
+        type: 'success' 
+      });
+      
+      await this.load();
+    } catch (error) {
+      eventBus.emit(EVENTS.NOTIFICATION, { 
+        message: error.message || 'Failed to update card', 
+        type: 'error' 
+      });
+    }
+  }
+
+  findCardById(cardId) {
+    for (const column of this.columns) {
+      const card = column.cards?.find(c => c._id === cardId);
+      if (card) return card;
+    }
+    return null;
+  }
+
   showCardDetails(cardId) {
     eventBus.emit(EVENTS.MODAL_OPEN, { type: 'card-details', cardId });
     // TODO: Implement card details modal
@@ -407,10 +753,15 @@ export class Board {
       this.load();
     };
 
+    this.handleCardMoved = () => {
+      this.load();
+    };
+
     socketService.on('user:joined', this.handleUserJoined);
     socketService.on('user:left', this.handleUserLeft);
     socketService.on('card:created', this.handleCardCreated);
     socketService.on('column:created', this.handleColumnCreated);
+    socketService.on('card:moved', this.handleCardMoved);
   }
 
   /**
@@ -421,5 +772,6 @@ export class Board {
     socketService.off('user:left', this.handleUserLeft);
     socketService.off('card:created', this.handleCardCreated);
     socketService.off('column:created', this.handleColumnCreated);
+    socketService.off('card:moved', this.handleCardMoved);
   }
 }

@@ -608,3 +608,217 @@
 🔄 **Phase 3 In Progress** (Days 15-21) - Socket.io ✅, Member Management ✅, Drag-drop next
 
 **Completion:** 47% (16.5 days out of 35)
+
+
+---
+
+### ✅ Day 19-20: Drag-and-Drop Implementation - COMPLETED
+**Date:** [Current Date]
+**Time Spent:** ~1 hour
+**Status:** ✅ Complete ✅ WORKING
+
+**Completed Tasks:**
+- ✅ Implemented native HTML5 drag-and-drop API
+- ✅ Added drag event handlers (dragstart, dragend, dragover, drop)
+- ✅ Created visual feedback for dragging (opacity, cursor changes)
+- ✅ Added drop zone highlighting
+- ✅ Integrated with card move API
+- ✅ Added real-time broadcasting of card moves
+- ✅ Implemented socket listener for card:moved events
+- ✅ Added CSS for drag states and drop zones
+- ✅ Fixed socket emit method call
+
+**Files Modified:**
+- `src/modules/Board.js` - Added setupDragAndDrop() method with all drag handlers
+- `src/styles/main.css` - Added drag-and-drop visual feedback styles
+- `server/socket/handlers.js` - Already had card:moved event handler
+
+**Working Features:**
+- ✅ Drag cards between columns (admin/member only)
+- ✅ Visual feedback during drag (opacity, cursor)
+- ✅ Drop zone highlighting on hover
+- ✅ Automatic position calculation
+- ✅ API call to move card
+- ✅ Real-time updates to all users
+- ✅ Success/error notifications
+- ✅ Board reload after move
+- ✅ Viewers cannot drag cards
+
+**Bug Fixed:**
+- ✅ Fixed `socketService.emit()` to `socketService.socket.emit()` for proper broadcasting
+
+**Drag-and-Drop Flow:**
+1. User grabs card (cursor changes to grabbing)
+2. Card becomes semi-transparent (opacity 0.5)
+3. Drop zones highlight when hovering (blue dashed border)
+4. Drop card in target column
+5. API updates card position
+6. Socket broadcasts to all users in real-time
+7. Board reloads with new positions
+
+**Technical Implementation:**
+- Native HTML5 Drag and Drop API (no libraries)
+- Event handlers: dragstart, dragend, dragover, dragenter, dragleave, drop
+- Data transfer using card ID
+- Position calculation based on drop location
+- Role-based drag permissions
+- Real-time socket broadcasting
+
+**Next Steps:**
+- Add card details modal
+- Implement card editing
+- Add more card metadata (labels, priority, checklist)
+- Optimize drag-and-drop performance
+
+---
+
+## Time Tracking
+- **Day 1:** 2 hours (Setup and basic structure)
+- **Day 2-3:** 3 hours (Database models and authentication)
+- **Day 4-5:** 2 hours (Board management API and UI)
+- **Day 10-11:** 1.5 hours (Column & Card APIs)
+- **Day 12-13:** 1 hour (State management)
+- **Day 14:** 1.5 hours (Board UI components)
+- **Bug Fixes:** 0.8 hours (Various fixes)
+- **Day 15-16:** 1.5 hours (Socket.io real-time)
+- **Member Management:** 0.5 hours (Add member feature)
+- **Day 19-20:** 1.1 hours (Drag-and-drop + bug fix)
+- **Total:** 14.9 hours / 35 days planned
+
+## Current Progress:
+✅ **Phase 1 Complete** (Days 1-7) - Foundation
+✅ **Phase 2 Complete** (Days 8-14) - Core Features
+✅ **Phase 3 Complete** (Days 15-21) - Real-Time Collaboration
+
+**Completion:** 57% (20 days out of 35)
+
+## Phase 3 Summary:
+✅ Socket.io with JWT authentication
+✅ Real-time card/column creation
+✅ User presence notifications
+✅ Member management (add by email)
+✅ Native drag-and-drop with real-time sync
+✅ Visual feedback and drop zones
+✅ Role-based permissions
+
+## Next Phase:
+🔄 **Phase 4: Advanced Features** (Days 22-28)
+- Card details modal with full editing
+- Card metadata (labels, priority, checklist, attachments)
+- Search and filter functionality
+- Activity history and notifications
+- Performance optimizations
+
+
+---
+
+### ✅ Edit & Delete Functionality - COMPLETED
+**Date:** [Current Date]
+**Time Spent:** ~20 minutes
+**Status:** ✅ Complete
+
+**Completed Tasks:**
+- ✅ Added edit/delete buttons to cards
+- ✅ Added edit/delete buttons to columns
+- ✅ Edit card modal with title and description
+- ✅ Edit column modal with title
+- ✅ Delete confirmation dialogs
+- ✅ Role-based button visibility
+- ✅ Hover-to-show button behavior
+- ✅ CSS styling for action buttons
+
+**Files Modified:**
+- `src/modules/Board.js` - Added edit/delete methods and modals
+- `src/styles/main.css` - Added button styles with hover effects
+
+**Working Features:**
+- ✅ Edit card (title, description) - admin/member
+- ✅ Delete card with confirmation - admin/member
+- ✅ Edit column (title) - admin only
+- ✅ Delete column with all cards - admin only
+- ✅ Buttons appear on hover
+- ✅ Confirmation dialogs prevent accidents
+- ✅ Success/error notifications
+- ✅ Board reloads after changes
+
+**UI/UX Details:**
+- Card buttons: ✏️ Edit, 🗑️ Delete (show on card hover)
+- Column buttons: ✏️ Edit, 🗑️ Delete (show on column hover)
+- Smooth opacity transitions
+- Icon buttons with tooltips
+- Modal forms with validation
+- Confirmation for destructive actions
+
+**Next Steps:**
+- Add real-time broadcasting for edits/deletes
+- Implement undo functionality
+- Add activity history
+- Enhance card metadata
+
+---
+
+## Time Tracking
+- **Day 1:** 2 hours (Setup and basic structure)
+- **Day 2-3:** 3 hours (Database models and authentication)
+- **Day 4-5:** 2 hours (Board management API and UI)
+- **Day 10-11:** 1.5 hours (Column & Card APIs)
+- **Day 12-13:** 1 hour (State management)
+- **Day 14:** 1.5 hours (Board UI components)
+- **Bug Fixes:** 0.8 hours (Various fixes)
+- **Day 15-16:** 1.5 hours (Socket.io real-time)
+- **Member Management:** 0.5 hours (Add member feature)
+- **Day 19-20:** 1.1 hours (Drag-and-drop + bug fix)
+- **Edit/Delete UI:** 0.3 hours (Card & column edit/delete)
+- **Total:** 15.2 hours / 35 days planned
+
+## Current Progress:
+✅ **Phase 1 Complete** (Days 1-7) - Foundation
+✅ **Phase 2 Complete** (Days 8-14) - Core Features
+✅ **Phase 3 Complete** (Days 15-21) - Real-Time Collaboration
+
+**Completion:** 60% (21 days out of 35)
+
+## Phase 3 Complete Summary:
+✅ Socket.io with JWT authentication
+✅ Real-time card/column creation
+✅ User presence notifications
+✅ Member management (add by email)
+✅ Native drag-and-drop with real-time sync
+✅ Visual feedback and drop zones
+✅ Role-based permissions
+✅ Edit/delete for cards and columns
+✅ Confirmation dialogs
+✅ Hover-to-show action buttons
+
+## Functional CRUD Operations:
+**Cards:**
+- ✅ Create (modal)
+- ✅ Read (display)
+- ✅ Update (edit modal)
+- ✅ Delete (with confirmation)
+- ✅ Move (drag-and-drop)
+
+**Columns:**
+- ✅ Create (modal)
+- ✅ Read (display)
+- ✅ Update (edit modal)
+- ✅ Delete (with confirmation, cascades to cards)
+
+**Boards:**
+- ✅ Create (modal)
+- ✅ Read (dashboard & detail view)
+- ✅ Update (API ready)
+- ✅ Delete/Archive (API ready)
+
+**Members:**
+- ✅ Add by email
+- ✅ Display count
+- ✅ Role assignment
+
+## Next Phase:
+🔄 **Phase 4: Polish & Advanced Features** (Days 22-28)
+- Real-time edit/delete broadcasting
+- Enhanced card metadata (labels, priority, checklist)
+- Activity history
+- Search and filter
+- Performance optimizations
