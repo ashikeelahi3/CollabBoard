@@ -71,19 +71,25 @@ boardSchema.virtual('memberCount').get(function() {
 
 // Check if user has access to board
 boardSchema.methods.hasAccess = function(userId) {
-  return this.owner.toString() === userId.toString() ||
-         this.members.some(member => member.user.toString() === userId.toString());
+  const ownerId = this.owner._id || this.owner;
+  return ownerId.toString() === userId.toString() ||
+         this.members.some(member => {
+           const memberId = member.user._id || member.user;
+           return memberId.toString() === userId.toString();
+         });
 };
 
 // Get user role in board
 boardSchema.methods.getUserRole = function(userId) {
-  if (this.owner.toString() === userId.toString()) {
+  const ownerId = this.owner._id || this.owner;
+  if (ownerId.toString() === userId.toString()) {
     return 'admin';
   }
   
-  const member = this.members.find(member => 
-    member.user.toString() === userId.toString()
-  );
+  const member = this.members.find(member => {
+    const memberId = member.user._id || member.user;
+    return memberId.toString() === userId.toString();
+  });
   
   return member ? member.role : null;
 };

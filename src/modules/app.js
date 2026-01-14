@@ -2,6 +2,10 @@
  * Main Application Module
  * Initializes the CollabBoard application
  */
+import { stateManager } from './StateManager.js';
+import { eventBus, EVENTS } from './EventBus.js';
+import { apiClient } from './ApiClient.js';
+import { Board } from './Board.js';
 
 class App {
   constructor() {
@@ -16,14 +20,19 @@ class App {
   async init() {
     console.log('CollabBoard initializing...');
     
-    // Setup event listeners
     this.setupEventListeners();
-    
-    // Test API connection
+    this.setupGlobalEvents();
     this.testConnection();
-    
-    // Check for existing authentication
     await this.checkAuth();
+  }
+
+  /**
+   * Setup global event handlers
+   */
+  setupGlobalEvents() {
+    eventBus.on(EVENTS.NOTIFICATION, (data) => {
+      this.showNotification(data.message, data.type);
+    });
   }
 
   /**
@@ -295,23 +304,15 @@ class App {
    */
   async loadBoards() {
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/boards', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load boards');
-      }
-
+      stateManager.set('ui.loading', true);
+      const data = await apiClient.get('/boards');
+      stateManager.set('boards', data.boards);
       this.renderBoards(data.boards);
     } catch (error) {
       console.error('Load boards error:', error);
       this.showNotification(error.message || 'Failed to load boards', 'error');
+    } finally {
+      stateManager.set('ui.loading', false);
     }
   }
 
@@ -397,24 +398,10 @@ class App {
     try {
       const title = document.getElementById('board-title').value;
       const description = document.getElementById('board-description').value;
-      const token = localStorage.getItem('authToken');
 
-      const response = await fetch('/api/boards', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ title, description })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create board');
-      }
-
+      const data = await apiClient.post('/boards', { title, description });
       this.showNotification('Board created successfully!', 'success');
+      eventBus.emit(EVENTS.BOARD_LOADED, data.board);
       this.loadBoards();
     } catch (error) {
       console.error('Create board error:', error);
@@ -426,8 +413,12 @@ class App {
    * Open board view
    */
   async openBoard(boardId) {
-    this.showNotification('Board view coming soon!', 'info');
-    // TODO: Implement board view
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('board-view').classList.remove('hidden');
+    document.querySelector('.app-header').style.display = 'none';
+    
+    const board = new Board(boardId);
+    await board.load();
   }
 
   /**
