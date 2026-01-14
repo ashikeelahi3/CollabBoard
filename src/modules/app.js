@@ -13,28 +13,59 @@ class App {
   /**
    * Initialize the application
    */
-  init() {
+  async init() {
     console.log('CollabBoard initializing...');
-    
-    // Check for existing authentication
-    this.checkAuth();
     
     // Setup event listeners
     this.setupEventListeners();
     
     // Test API connection
     this.testConnection();
+    
+    // Check for existing authentication
+    await this.checkAuth();
   }
 
   /**
    * Check if user is already authenticated
    */
-  checkAuth() {
+  async checkAuth() {
     const token = localStorage.getItem('authToken');
-    if (token) {
-      // TODO: Validate token with server
-      console.log('Found existing auth token');
+    const userStr = localStorage.getItem('user');
+    
+    if (token && userStr) {
+      try {
+        // Validate token with server
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          this.currentUser = data.user;
+          
+          // Hide welcome and show dashboard
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('welcome').classList.add('hidden');
+          this.showDashboard();
+          return;
+        } else {
+          // Token invalid, clear storage
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+      }
     }
+    
+    // No valid auth, show welcome screen
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('welcome').classList.remove('hidden');
   }
 
   /**
@@ -73,7 +104,7 @@ class App {
       console.log('API Connection:', data.message);
     } catch (error) {
       console.error('API Connection failed:', error);
-      this.showNotification('Connection failed. Please check your internet connection.', 'error');
+      // Don't show notification here, let checkAuth handle it
     }
   }
 
@@ -254,6 +285,149 @@ class App {
     
     // Add logout handler
     document.getElementById('logout-btn').addEventListener('click', this.handleLogout.bind(this));
+    
+    // Load boards
+    this.loadBoards();
+  }
+
+  /**
+   * Load user's boards
+   */
+  async loadBoards() {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/boards', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load boards');
+      }
+
+      this.renderBoards(data.boards);
+    } catch (error) {
+      console.error('Load boards error:', error);
+      this.showNotification(error.message || 'Failed to load boards', 'error');
+    }
+  }
+
+  /**
+   * Render boards in dashboard
+   */
+  renderBoards(boards) {
+    const boardsGrid = document.querySelector('.boards-grid');
+    
+    if (boards.length === 0) {
+      boardsGrid.innerHTML = `
+        <div class="empty-state">
+          <p>No boards yet. Create your first board to get started!</p>
+        </div>
+      `;
+    } else {
+      boardsGrid.innerHTML = boards.map(board => `
+        <div class="board-card" data-board-id="${board._id}" style="background: ${board.background}">
+          <h3>${board.title}</h3>
+          <p>${board.description || 'No description'}</p>
+          <div class="board-meta">
+            <span>Owner: ${board.owner.username}</span>
+            <span>${board.memberCount || 1} members</span>
+          </div>
+        </div>
+      `).join('');
+
+      // Add click handlers to board cards
+      document.querySelectorAll('.board-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const boardId = card.dataset.boardId;
+          this.openBoard(boardId);
+        });
+      });
+    }
+
+    // Always add create board button handler
+    const createBtn = document.querySelector('.dashboard-header button');
+    if (createBtn) {
+      createBtn.onclick = () => this.showCreateBoardModal();
+    }
+  }
+
+  /**
+   * Show create board modal
+   */
+  showCreateBoardModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>Create New Board</h2>
+        <form id="create-board-form">
+          <div class="form-group">
+            <label>Board Title</label>
+            <input type="text" id="board-title" required maxlength="100">
+          </div>
+          <div class="form-group">
+            <label>Description (optional)</label>
+            <textarea id="board-description" maxlength="500"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Board</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('create-board-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.createBoard();
+      modal.remove();
+    });
+  }
+
+  /**
+   * Create new board
+   */
+  async createBoard() {
+    try {
+      const title = document.getElementById('board-title').value;
+      const description = document.getElementById('board-description').value;
+      const token = localStorage.getItem('authToken');
+
+      const response = await fetch('/api/boards', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title, description })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create board');
+      }
+
+      this.showNotification('Board created successfully!', 'success');
+      this.loadBoards();
+    } catch (error) {
+      console.error('Create board error:', error);
+      this.showNotification(error.message || 'Failed to create board', 'error');
+    }
+  }
+
+  /**
+   * Open board view
+   */
+  async openBoard(boardId) {
+    this.showNotification('Board view coming soon!', 'info');
+    // TODO: Implement board view
   }
 
   /**

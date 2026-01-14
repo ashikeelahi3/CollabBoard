@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDB from './config/database.js';
 import authRoutes from './routes/auth.js';
+import boardRoutes from './routes/boards.js';
 
 // Load environment variables
 dotenv.config();
@@ -33,6 +34,7 @@ app.use(express.static(path.join(__dirname, '../src')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/boards', boardRoutes);
 
 // Basic route
 app.get('/api/health', (req, res) => {
