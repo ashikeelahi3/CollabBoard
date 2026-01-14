@@ -471,3 +471,140 @@
 - **Bug Fixes:** 0.5 hours (Access control, navigation, column creation)
 - **Bug Fixes 2:** 0.3 hours (Modal improvements, validation)
 - **Total:** 11.8 hours / 35 days planned
+
+
+---
+
+### ✅ Day 15-16: Socket.io Setup - COMPLETED
+**Date:** [Current Date]
+**Time Spent:** ~1.5 hours
+**Status:** ✅ Complete
+
+**Completed Tasks:**
+- ✅ Socket.io server with JWT authentication
+- ✅ Room-based board subscriptions
+- ✅ Client socket service with reconnection
+- ✅ Event handling architecture
+- ✅ User presence notifications (join/leave)
+- ✅ Real-time card creation broadcasting
+- ✅ Real-time column creation broadcasting
+
+**Files Created:**
+- `server/socket/handlers.js` - Socket.io server handlers with auth
+- `src/modules/SocketService.js` - Client-side socket management
+
+**Files Modified:**
+- `server/server.js` - Integrated socket handlers
+- `src/modules/app.js` - Connect/disconnect socket on login/logout
+- `src/modules/Board.js` - Socket listeners and real-time updates
+
+**Working Features:**
+- ✅ JWT authentication for socket connections
+- ✅ Automatic reconnection on disconnect
+- ✅ Board-specific rooms (users only see their board updates)
+- ✅ User join/leave notifications
+- ✅ Real-time card creation (all users see new cards instantly)
+- ✅ Real-time column creation (all users see new columns instantly)
+- ✅ Socket cleanup on logout and board leave
+
+**Socket Events Implemented:**
+- `board:join` - Join board room
+- `board:leave` - Leave board room
+- `card:created` - Broadcast new card
+- `card:updated` - Broadcast card updates
+- `card:moved` - Broadcast card movement
+- `column:created` - Broadcast new column
+- `user:joined` - User presence notification
+- `user:left` - User left notification
+
+**Next Steps:**
+- Add drag-and-drop functionality
+- Implement card movement broadcasting
+- Add optimistic UI updates
+- Test multi-user collaboration
+
+---
+
+## Time Tracking
+- **Day 1:** 2 hours (Setup and basic structure)
+- **Day 2-3:** 3 hours (Database models and authentication)
+- **Day 4-5:** 2 hours (Board management API and UI)
+- **Day 10-11:** 1.5 hours (Column & Card APIs)
+- **Day 12-13:** 1 hour (State management)
+- **Day 14:** 1.5 hours (Board UI components)
+- **Bug Fixes:** 0.8 hours (Various fixes)
+- **Day 15-16:** 1.5 hours (Socket.io real-time)
+- **Total:** 13.3 hours / 35 days planned
+
+## Current Progress:
+✅ **Phase 1 Complete** (Days 1-7)
+✅ **Phase 2 Complete** (Days 8-14)
+🔄 **Phase 3 In Progress** (Days 15-21) - Socket.io done, drag-drop next
+
+**Completion:** 46% (16 days out of 35)
+
+
+---
+
+### ✅ Member Management Feature - COMPLETED
+**Date:** [Current Date]
+**Time Spent:** ~30 minutes
+**Status:** ✅ Complete
+
+**Completed Tasks:**
+- ✅ Fixed backend API to accept email instead of userId
+- ✅ Added "Add Member" button (admin-only) in board header
+- ✅ Created member invitation modal with email and role selection
+- ✅ Implemented member addition with user lookup by email
+- ✅ Added member count display in board view (owner + members)
+- ✅ Fixed dashboard board cards to show correct member count
+- ✅ Added validation for duplicate members
+- ✅ Added error handling for non-existent users
+
+**Files Modified:**
+- `server/routes/boards.js` - Fixed POST /boards/:id/members to find user by email
+- `src/modules/Board.js` - Added member modal, member count display
+- `src/modules/app.js` - Fixed dashboard board cards member count
+
+**Working Features:**
+- ✅ Admin can add members by email
+- ✅ Role selection (Viewer, Member, Admin)
+- ✅ Member count shows correctly (owner + members)
+- ✅ Dashboard displays accurate member count per board
+- ✅ Validation prevents duplicate members
+- ✅ Error messages for invalid emails
+
+**User Flow:**
+1. Admin opens board
+2. Clicks "+ Add Member" button
+3. Enters user email and selects role
+4. Member is added to board
+5. Member count updates automatically
+6. Dashboard reflects new member count
+
+**Next Steps:**
+- Implement drag-and-drop for cards (Days 19-20)
+- Add card details modal
+- Implement card movement broadcasting
+- Add optimistic UI updates
+
+---
+
+## Time Tracking
+- **Day 1:** 2 hours (Setup and basic structure)
+- **Day 2-3:** 3 hours (Database models and authentication)
+- **Day 4-5:** 2 hours (Board management API and UI)
+- **Day 10-11:** 1.5 hours (Column & Card APIs)
+- **Day 12-13:** 1 hour (State management)
+- **Day 14:** 1.5 hours (Board UI components)
+- **Bug Fixes:** 0.8 hours (Various fixes)
+- **Day 15-16:** 1.5 hours (Socket.io real-time)
+- **Member Management:** 0.5 hours (Add member feature)
+- **Total:** 13.8 hours / 35 days planned
+
+## Current Progress:
+✅ **Phase 1 Complete** (Days 1-7)
+✅ **Phase 2 Complete** (Days 8-14)
+🔄 **Phase 3 In Progress** (Days 15-21) - Socket.io ✅, Member Management ✅, Drag-drop next
+
+**Completion:** 47% (16.5 days out of 35)
