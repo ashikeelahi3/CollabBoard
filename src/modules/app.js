@@ -10,6 +10,7 @@ import { socketService } from './SocketService.js';
 import './Notification.js';
 import './LoadingManager.js';
 import './KeyboardShortcuts.js';
+import { themeManager } from './ThemeManager.js';
 
 class App {
   constructor() {
@@ -256,15 +257,21 @@ class App {
     
     const navMenu = document.querySelector('.nav-menu');
     navMenu.innerHTML = `
-      <span>Welcome, ${this.currentUser.username}!</span>
-      <button id="profile-btn" class="btn btn-secondary" title="Profile">👤</button>
-      <button id="shortcuts-btn" class="btn btn-secondary" title="Keyboard Shortcuts">⌨️</button>
-      <button id="logout-btn" class="btn btn-secondary">Logout</button>
+      <span class="navbar-welcome">Welcome, ${this.currentUser.username}!</span>
+      <button id="theme-toggle-btn" class="btn btn-secondary" title="Toggle Theme" style="min-width: 45px; font-size: 1.2rem;">🌙</button>
+      <button id="shortcuts-btn" class="btn btn-secondary" title="Keyboard Shortcuts" style="min-width: 45px; font-size: 1.2rem;">⌨️</button>
+      <button id="profile-btn" class="btn btn-secondary" title="Profile" style="min-width: 45px; font-size: 1.2rem;">👤</button>
     `;
+    
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    this.updateThemeIcon(themeBtn);
+    themeBtn.addEventListener('click', () => {
+      themeManager.toggle();
+      this.updateThemeIcon(themeBtn);
+    });
     
     document.getElementById('profile-btn').addEventListener('click', this.showProfile.bind(this));
     document.getElementById('shortcuts-btn').addEventListener('click', () => window.keyboardShortcuts.showHelp());
-    document.getElementById('logout-btn').addEventListener('click', this.handleLogout.bind(this));
     
     socketService.connect();
     this.loadBoards();
@@ -521,6 +528,14 @@ class App {
   }
 
   /**
+   * Update theme toggle icon
+   */
+  updateThemeIcon(btn) {
+    btn.textContent = themeManager.getCurrentTheme() === 'light' ? '🌙' : '☀️';
+    btn.title = themeManager.getCurrentTheme() === 'light' ? 'Dark Mode' : 'Light Mode';
+  }
+
+  /**
    * Show user profile modal
    */
   showProfile() {
@@ -541,6 +556,7 @@ class App {
           <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
             <button type="submit" class="btn btn-primary">Save Changes</button>
+            <button type="button" class="btn btn-danger" id="logout-from-profile-btn">Logout</button>
           </div>
         </form>
       </div>
@@ -551,7 +567,11 @@ class App {
     document.getElementById('profile-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       await this.updateProfile();
-      // Modal will close automatically on success, stay open on error
+    });
+    
+    document.getElementById('logout-from-profile-btn').addEventListener('click', () => {
+      modal.remove();
+      this.handleLogout();
     });
   }
 
@@ -574,7 +594,7 @@ class App {
       
       this.showNotification('Profile updated successfully!', 'success');
       
-      const navMenu = document.querySelector('.nav-menu span');
+      const navMenu = document.querySelector('.nav-menu span.navbar-welcome');
       if (navMenu) navMenu.textContent = `Welcome, ${this.currentUser.username}!`;
       
       // Close modal on success
