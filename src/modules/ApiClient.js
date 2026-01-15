@@ -21,6 +21,13 @@ class ApiClient {
    * Handle response
    */
   async handleResponse(response) {
+    const contentType = response.headers.get('content-type');
+    
+    // Check if response is JSON
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Server error: Invalid response format');
+    }
+    
     const data = await response.json();
     
     if (!response.ok) {

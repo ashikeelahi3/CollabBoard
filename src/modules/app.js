@@ -7,6 +7,10 @@ import { eventBus, EVENTS } from './EventBus.js';
 import { apiClient } from './ApiClient.js';
 import { Board } from './Board.js';
 import { socketService } from './SocketService.js';
+import './Notification.js';
+import './LoadingManager.js';
+import './KeyboardShortcuts.js';
+import { themeManager } from './ThemeManager.js';
 
 class App {
   constructor() {
@@ -142,6 +146,7 @@ class App {
     
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
+    const submitBtn = event.target.querySelector('button[type="submit"]');
 
     if (!email || !password) {
       this.showNotification('Please fill in all fields', 'error');
@@ -149,6 +154,8 @@ class App {
     }
 
     try {
+      window.loadingManager.showButtonLoading(submitBtn, 'Logging in...');
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -163,19 +170,18 @@ class App {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store token and user data
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       this.currentUser = data.user;
       this.showNotification('Login successful!', 'success');
-      
-      // Hide auth forms and show dashboard
       this.showDashboard();
       
     } catch (error) {
       console.error('Login error:', error);
       this.showNotification(error.message || 'Login failed. Please try again.', 'error');
+    } finally {
+      window.loadingManager.hideButtonLoading(submitBtn);
     }
   }
 
@@ -188,6 +194,7 @@ class App {
     const username = document.getElementById('register-username').value;
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
+    const submitBtn = event.target.querySelector('button[type="submit"]');
 
     if (!username || !email || !password) {
       this.showNotification('Please fill in all fields', 'error');
@@ -200,6 +207,8 @@ class App {
     }
 
     try {
+      window.loadingManager.showButtonLoading(submitBtn, 'Creating account...');
+      
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -214,19 +223,18 @@ class App {
         throw new Error(data.error || 'Registration failed');
       }
 
-      // Store token and user data
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       
       this.currentUser = data.user;
       this.showNotification('Registration successful! Welcome!', 'success');
-      
-      // Hide auth forms and show dashboard
       this.showDashboard();
       
     } catch (error) {
       console.error('Register error:', error);
       this.showNotification(error.message || 'Registration failed. Please try again.', 'error');
+    } finally {
+      window.loadingManager.hideButtonLoading(submitBtn);
     }
   }
 
@@ -234,72 +242,38 @@ class App {
    * Show notification to user
    */
   showNotification(message, type = 'info') {
-    const container = document.getElementById('notifications');
-    const notification = document.createElement('div');
-    
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-      <span>${message}</span>
-      <button onclick="this.parentElement.remove()">&times;</button>
-    `;
-    
-    // Add notification styles
-    notification.style.cssText = `
-      background: ${type === 'error' ? '#fee2e2' : type === 'success' ? '#dcfce7' : '#dbeafe'};
-      color: ${type === 'error' ? '#dc2626' : type === 'success' ? '#16a34a' : '#2563eb'};
-      padding: 1rem;
-      border-radius: 0.5rem;
-      border: 1px solid ${type === 'error' ? '#fecaca' : type === 'success' ? '#bbf7d0' : '#bfdbfe'};
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      min-width: 300px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    `;
-    
-    notification.querySelector('button').style.cssText = `
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-      margin-left: 1rem;
-    `;
-    
-    container.appendChild(notification);
-    
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      if (notification.parentElement) {
-        notification.remove();
-      }
-    }, 5000);
+    if (window.notification) {
+      window.notification.show(message, type);
+    }
   }
 
   /**
    * Show dashboard after successful authentication
    */
   showDashboard() {
-    // Hide all other screens
     document.getElementById('welcome').classList.add('hidden');
     document.getElementById('auth-container').classList.add('hidden');
-    
-    // Show dashboard
     document.getElementById('dashboard').classList.remove('hidden');
     
-    // Update header
     const navMenu = document.querySelector('.nav-menu');
     navMenu.innerHTML = `
-      <span>Welcome, ${this.currentUser.username}!</span>
-      <button id="logout-btn" class="btn btn-secondary">Logout</button>
+      <span class="navbar-welcome">Welcome, ${this.currentUser.username}!</span>
+      <button id="theme-toggle-btn" class="btn btn-secondary" title="Toggle Theme" style="min-width: 45px; font-size: 1.2rem;">🌙</button>
+      <button id="shortcuts-btn" class="btn btn-secondary" title="Keyboard Shortcuts" style="min-width: 45px; font-size: 1.2rem;">⌨️</button>
+      <button id="profile-btn" class="btn btn-secondary" title="Profile" style="min-width: 45px; font-size: 1.2rem;">👤</button>
     `;
     
-    // Add logout handler
-    document.getElementById('logout-btn').addEventListener('click', this.handleLogout.bind(this));
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    this.updateThemeIcon(themeBtn);
+    themeBtn.addEventListener('click', () => {
+      themeManager.toggle();
+      this.updateThemeIcon(themeBtn);
+    });
     
-    // Connect socket
+    document.getElementById('profile-btn').addEventListener('click', this.showProfile.bind(this));
+    document.getElementById('shortcuts-btn').addEventListener('click', () => window.keyboardShortcuts.showHelp());
+    
     socketService.connect();
-    
-    // Load boards
     this.loadBoards();
   }
 
@@ -329,23 +303,56 @@ class App {
     if (boards.length === 0) {
       boardsGrid.innerHTML = `
         <div class="empty-state">
-          <p>No boards yet. Create your first board to get started!</p>
+          <div class="empty-icon">📋</div>
+          <h3>No boards yet</h3>
+          <p>Create your first board to start organizing your work!</p>
+          <button class="btn btn-primary" onclick="window.app.showCreateBoardModal()">Create Your First Board</button>
         </div>
       `;
     } else {
       boardsGrid.innerHTML = boards.map(board => {
         const memberCount = 1 + (board.members?.length || 0);
+        const createdDate = new Date(board.createdAt);
+        const updatedDate = new Date(board.updatedAt);
+        const description = board.description && board.description.trim() ? board.description : 'No description provided';
+        
         return `
-          <div class="board-card" data-board-id="${board._id}" style="background: ${board.background}">
-            <h3>${board.title}</h3>
-            <p>${board.description || 'No description'}</p>
-            <div class="board-meta">
-              <span>Owner: ${board.owner.username}</span>
-              <span>👥 ${memberCount} member${memberCount !== 1 ? 's' : ''}</span>
+          <div class="board-card" data-board-id="${board._id}">
+            <div class="board-card-header" style="background: ${board.background || '#0366d6'}">
+              <h3>${board.title}</h3>
+            </div>
+            <div class="board-card-body">
+              <p class="board-description">${description}</p>
+              <div class="board-stats">
+                <div class="stat-item">
+                  <span class="stat-icon">👥</span>
+                  <span class="stat-label">Members</span>
+                  <span class="stat-value">${memberCount}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-icon">📅</span>
+                  <span class="stat-label">Created</span>
+                  <span class="stat-value">${createdDate.toLocaleDateString()}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-icon">🔄</span>
+                  <span class="stat-label">Updated</span>
+                  <span class="stat-value">${updatedDate.toLocaleDateString()}</span>
+                </div>
+              </div>
+              <div class="board-footer">
+                <span class="board-owner">👤 ${board.owner.username}</span>
+                <div class="board-card-actions">
+                  <button class="btn-edit-board" onclick="event.stopPropagation(); window.app.showEditBoardModal('${board._id}')" title="Edit">✏️</button>
+                  <button class="btn-delete-board" onclick="event.stopPropagation(); window.app.deleteBoard('${board._id}')" title="Delete">🗑️</button>
+                  <button class="btn-view" onclick="event.stopPropagation(); window.app.openBoard('${board._id}')">Open</button>
+                </div>
+              </div>
             </div>
           </div>
         `;
       }).join('');
+      
       // Add click handlers to board cards
       document.querySelectorAll('.board-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -425,6 +432,180 @@ class App {
     
     const board = new Board(boardId);
     await board.load();
+  }
+
+  /**
+   * Show edit board modal
+   */
+  async showEditBoardModal(boardId) {
+    try {
+      const data = await apiClient.get(`/boards/${boardId}`);
+      const board = data.board;
+      
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <h2>Edit Board</h2>
+          <form id="edit-board-form">
+            <div class="form-group">
+              <label>Board Title</label>
+              <input type="text" id="edit-board-title" value="${board.title}" required maxlength="100">
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="edit-board-description" maxlength="500">${board.description || ''}</textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      document.getElementById('edit-board-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await this.updateBoard(boardId);
+        modal.remove();
+      });
+    } catch (error) {
+      console.error('Load board error:', error);
+      this.showNotification('Failed to load board details', 'error');
+    }
+  }
+
+  /**
+   * Update board
+   */
+  async updateBoard(boardId) {
+    try {
+      const title = document.getElementById('edit-board-title').value;
+      const description = document.getElementById('edit-board-description').value;
+
+      await apiClient.put(`/boards/${boardId}`, { title, description });
+      this.showNotification('Board updated successfully!', 'success');
+      this.loadBoards();
+    } catch (error) {
+      console.error('Update board error:', error);
+      this.showNotification(error.message || 'Failed to update board', 'error');
+    }
+  }
+
+  /**
+   * Delete board
+   */
+  async deleteBoard(boardId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <h2 style="color: #dc2626;">Delete Board</h2>
+        <p style="margin: 1rem 0; color: #374151;">Are you sure you want to delete this board? This action cannot be undone.</p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+      try {
+        await apiClient.delete(`/boards/${boardId}`);
+        this.showNotification('Board deleted successfully!', 'success');
+        this.loadBoards();
+        modal.remove();
+      } catch (error) {
+        console.error('Delete board error:', error);
+        this.showNotification(error.message || 'Failed to delete board', 'error');
+        modal.remove();
+      }
+    });
+  }
+
+  /**
+   * Update theme toggle icon
+   */
+  updateThemeIcon(btn) {
+    btn.textContent = themeManager.getCurrentTheme() === 'light' ? '🌙' : '☀️';
+    btn.title = themeManager.getCurrentTheme() === 'light' ? 'Dark Mode' : 'Light Mode';
+  }
+
+  /**
+   * Show user profile modal
+   */
+  showProfile() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>👤 User Profile</h2>
+        <form id="profile-form">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="profile-username" value="${this.currentUser.username}" required maxlength="30">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="profile-email" value="${this.currentUser.email}" required>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <button type="button" class="btn btn-danger" id="logout-from-profile-btn">Logout</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await this.updateProfile();
+    });
+    
+    document.getElementById('logout-from-profile-btn').addEventListener('click', () => {
+      modal.remove();
+      this.handleLogout();
+    });
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile() {
+    const submitBtn = document.querySelector('#profile-form button[type="submit"]');
+    
+    try {
+      const username = document.getElementById('profile-username').value;
+      const email = document.getElementById('profile-email').value;
+
+      window.loadingManager.showButtonLoading(submitBtn, 'Saving...');
+      
+      const data = await apiClient.put('/auth/profile', { username, email });
+      
+      this.currentUser = data.user;
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      this.showNotification('Profile updated successfully!', 'success');
+      
+      const navMenu = document.querySelector('.nav-menu span.navbar-welcome');
+      if (navMenu) navMenu.textContent = `Welcome, ${this.currentUser.username}!`;
+      
+      // Close modal on success
+      document.querySelector('.modal')?.remove();
+    } catch (error) {
+      console.error('Update profile error:', error);
+      this.showNotification(error.message || 'Failed to update profile', 'error');
+      // Don't close modal on error
+    } finally {
+      window.loadingManager.hideButtonLoading(submitBtn);
+    }
   }
 
   /**

@@ -175,9 +175,52 @@ router.get('/me', authenticateToken, async (req, res) => {
  * @access  Private
  */
 router.post('/logout', authenticateToken, (req, res) => {
-  // In a stateless JWT system, logout is handled client-side
-  // by removing the token from storage
   res.json({ message: 'Logout successful' });
+});
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update user profile
+ * @access  Private
+ */
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const { username, email } = req.body;
+
+    if (!username || !email) {
+      return res.status(400).json({ error: 'Username and email are required' });
+    }
+
+    // Check if email/username already taken by another user
+    const existing = await User.findOne({
+      $or: [{ email }, { username }],
+      _id: { $ne: req.user._id }
+    });
+
+    if (existing) {
+      const field = existing.email === email ? 'email' : 'username';
+      return res.status(400).json({ 
+        error: `This ${field} is already in use. Please choose a different one.` 
+      });
+    }
+
+    req.user.username = username.trim();
+    req.user.email = email.toLowerCase().trim();
+    await req.user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: req.user._id,
+        username: req.user.username,
+        email: req.user.email,
+        role: req.user.role
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
 });
 
 export default router;
